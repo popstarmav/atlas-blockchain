@@ -1,6 +1,3 @@
-#include <openssl/ec.h>
-#include <openssl/bn.h>
-#include <openssl/obj_mac.h>
 #include "hblk_crypto.h"
 
 /**
@@ -14,29 +11,29 @@ uint8_t *ec_to_pub(EC_KEY const *key, uint8_t pub[EC_PUB_LEN])
 {
     const EC_POINT *pub_key_point;
     const EC_GROUP *group;
-    size_t pub_len;
+    size_t pub_key_len;
 
     /* Check if key is NULL */
     if (!key || !pub)
         return (NULL);
 
-    /* Get the public key point from the EC_KEY structure */
+    /* Get the public key point from the EC_KEY */
     pub_key_point = EC_KEY_get0_public_key(key);
     if (!pub_key_point)
         return (NULL);
 
-    /* Get the EC group from the key */
+    /* Get the group from the EC_KEY */
     group = EC_KEY_get0_group(key);
     if (!group)
         return (NULL);
 
     /* Convert the public key point to uncompressed format */
-    pub_len = EC_POINT_point2oct(group, pub_key_point, 
-                                 POINT_CONVERSION_UNCOMPRESSED,
-                                 pub, EC_PUB_LEN, NULL);
-    
-    /* Check if conversion was successful and length matches expected */
-    if (pub_len != EC_PUB_LEN)
+    pub_key_len = EC_POINT_point2oct(group, pub_key_point,
+                                     POINT_CONVERSION_UNCOMPRESSED,
+                                     pub, EC_PUB_LEN, NULL);
+
+    /* Check if conversion was successful */
+    if (pub_key_len != EC_PUB_LEN)
         return (NULL);
 
     return (pub);
