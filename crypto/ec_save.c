@@ -19,17 +19,29 @@
  */
 static int _alloc_key_paths(char const *folder, char **pri_path, char **pub_path)
 {
-	*pub_path = calloc(1, strlen(folder) + strlen("/") + strlen(PUB_FILENAME) + 1);
+	size_t folder_len = strlen(folder);
+	size_t pub_path_len = folder_len + 1 + strlen(PUB_FILENAME) + 1;
+	size_t pri_path_len = folder_len + 1 + strlen(PRI_FILENAME) + 1;
+
+	*pub_path = calloc(1, pub_path_len);
+	if (!*pub_path)
+		return (0);
 	strcpy(*pub_path, folder);
-	strcpy(*pub_path + strlen(folder), "/");
-	strcpy(*pub_path + strlen(folder) + 1, PUB_FILENAME);
+	strcat(*pub_path, "/");
+	strcat(*pub_path, PUB_FILENAME);
 
-	*pri_path = calloc(1, strlen(folder) + strlen("/") + strlen(PRI_FILENAME) + 1);
+	*pri_path = calloc(1, pri_path_len);
+	if (!*pri_path)
+	{
+		free(*pub_path);
+		*pub_path = NULL;
+		return (0);
+	}
 	strcpy(*pri_path, folder);
-	strcpy(*pri_path + strlen(folder), "/");
-	strcpy(*pri_path + strlen(folder) + 1, PRI_FILENAME);
+	strcat(*pri_path, "/");
+	strcat(*pri_path, PRI_FILENAME);
 
-	return (*pri_path && *pub_path);
+	return (1);
 }
 
 /**
@@ -55,11 +67,7 @@ int ec_save(EC_KEY *key, char const *folder)
 	}
 
 	if (!_alloc_key_paths(folder, &pri_path, &pub_path))
-	{
-		free(pri_path);
-		free(pub_path);
 		return (0);
-	}
 
 	fp = fopen(pri_path, "w");
 	if (!fp)
@@ -99,3 +107,4 @@ int ec_save(EC_KEY *key, char const *folder)
 	free(pub_path);
 	return (1);
 }
+
