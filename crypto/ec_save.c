@@ -4,6 +4,33 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
+#define PRI_FILENAME "key.pem"
+#define PUB_FILENAME "key_pub.pem"
+
+/**
+ * _alloc_key_paths - Allocates and builds file paths for keys
+ * @folder: The folder path
+ * @pri_path: Pointer to store private key path
+ * @pub_path: Pointer to store public key path
+ *
+ * Return: 1 on success, 0 on failure
+ */
+static int _alloc_key_paths(char const *folder, char **pri_path, char **pub_path)
+{
+	*pub_path = calloc(1, strlen(folder) + strlen("/") + strlen(PUB_FILENAME) + 1);
+	strcpy(*pub_path, folder);
+	strcpy(*pub_path + strlen(folder), "/");
+	strcpy(*pub_path + strlen(folder) + 1, PUB_FILENAME);
+
+	*pri_path = calloc(1, strlen(folder) + strlen("/") + strlen(PRI_FILENAME) + 1);
+	strcpy(*pri_path, folder);
+	strcpy(*pri_path + strlen(folder), "/");
+	strcpy(*pri_path + strlen(folder) + 1, PRI_FILENAME);
+
+	return (*pri_path && *pub_path);
+}
 
 /**
  * ec_save - Saves an existing EC key pair to disk
@@ -15,7 +42,7 @@
 int ec_save(EC_KEY *key, char const *folder)
 {
 	FILE *fp;
-	char path[1024];
+	char *pri_path = NULL, *pub_path = NULL;
 	struct stat st;
 
 	if (!key || !folder)
@@ -27,30 +54,48 @@ int ec_save(EC_KEY *key, char const *folder)
 			return (0);
 	}
 
-	snprintf(path, sizeof(path), "%s/key.pem", folder);
-	fp = fopen(path, "w");
-	if (!fp)
+	if (!_alloc_key_paths(folder, &pri_path, &pub_path))
+	{
+		free(pri_path);
+		free(pub_path);
 		return (0);
+	}
+
+	fp = fopen(pri_path, "w");
+	if (!fp)
+	{
+		free(pri_path);
+		free(pub_path);
+		return (0);
+	}
 
 	if (!PEM_write_ECPrivateKey(fp, key, NULL, NULL, 0, NULL, NULL))
 	{
 		fclose(fp);
+		free(pri_path);
+		free(pub_path);
 		return (0);
 	}
 	fclose(fp);
 
-	snprintf(path, sizeof(path), "%s/key_pub.pem", folder);
-	fp = fopen(path, "w");
+	fp = fopen(pub_path, "w");
 	if (!fp)
+	{
+		free(pri_path);
+		free(pub_path);
 		return (0);
+	}
 
 	if (!PEM_write_EC_PUBKEY(fp, key))
 	{
 		fclose(fp);
+		free(pri_path);
+		free(pub_path);
 		return (0);
 	}
 	fclose(fp);
 
+	free(pri_path);
+	free(pub_path);
 	return (1);
 }
-
