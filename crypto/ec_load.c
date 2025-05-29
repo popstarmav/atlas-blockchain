@@ -31,4 +31,3 @@ EC_KEY *ec_load(char const *folder)
 
 	return (key);
 }
-
