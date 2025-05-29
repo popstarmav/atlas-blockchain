@@ -23,12 +23,13 @@ uint8_t *ec_sign(EC_KEY const *key, uint8_t const *msg, size_t msglen, sig_t *si
 	if (!SHA256(msg, msglen, hash))
 		return (NULL);
 
-	memset(sig->sig, 0, SIG_MAX_LEN);
+	sig_len = ECDSA_size(key);
+	if (sig_len == 0 || sig_len > SIG_MAX_LEN)
+		return (NULL);
 
 	if (!ECDSA_sign(0, hash, SHA256_DIGEST_LENGTH, sig->sig, &sig_len, (EC_KEY *)key))
 		return (NULL);
 
-	sig->len = (uint8_t)sig_len;
+	sig->len = sig_len;
 	return (sig->sig);
 }
-
