@@ -1,17 +1,11 @@
 #include "llist.h"
 #include <stdlib.h>
 
-/**
- * llist_create - Creates a new linked list
- * @mt_support: Multi-threading support flag (ignored for now)
- *
- * Return: Pointer to the new list, or NULL on failure
- */
 llist_t *llist_create(int mt_support)
 {
     llist_t *list;
     
-    (void)mt_support; /* Unused parameter */
+    (void)mt_support;
     
     list = malloc(sizeof(llist_t));
     if (!list)
@@ -24,14 +18,6 @@ llist_t *llist_create(int mt_support)
     return (list);
 }
 
-/**
- * llist_destroy - Destroys a linked list
- * @list: Pointer to the list
- * @free_nodes: Whether to free the nodes
- * @free_node: Function to free node data
- *
- * Return: 0 on success, -1 on failure
- */
 int llist_destroy(llist_t *list, int free_nodes, void (*free_node)(void *))
 {
     llist_t *current, *next;
@@ -43,10 +29,13 @@ int llist_destroy(llist_t *list, int free_nodes, void (*free_node)(void *))
     while (current)
     {
         next = current->next;
-        if (free_nodes && current->node && free_node)
-            free_node(current->node);
-        else if (free_nodes && current->node)
-            free(current->node);
+        if (free_nodes && current->node)
+        {
+            if (free_node)
+                free_node(current->node);
+            else
+                free(current->node);
+        }
         free(current);
         current = next;
     }
@@ -54,14 +43,6 @@ int llist_destroy(llist_t *list, int free_nodes, void (*free_node)(void *))
     return (0);
 }
 
-/**
- * llist_add_node - Adds a node to the list
- * @list: Pointer to the list
- * @node: Data to add
- * @mode: Where to add (front or rear)
- *
- * Return: 0 on success, -1 on failure
- */
 int llist_add_node(llist_t *list, void *node, int mode)
 {
     llist_t *new_element;
@@ -70,7 +51,14 @@ int llist_add_node(llist_t *list, void *node, int mode)
     if (!list || !node)
         return (-1);
     
-    /* Create new list element */
+    /* If this is the first node being added */
+    if (list->node == NULL)
+    {
+        list->node = node;
+        return (0);
+    }
+    
+    /* Allocate new element */
     new_element = malloc(sizeof(llist_t));
     if (!new_element)
         return (-1);
@@ -79,35 +67,29 @@ int llist_add_node(llist_t *list, void *node, int mode)
     new_element->next = NULL;
     new_element->prev = NULL;
     
-    /* If this is the first element */
-    if (!list->node)
-    {
-        free(new_element);
-        list->node = node;
-        return (0);
-    }
-    
     if (mode == ADD_NODE_REAR)
     {
         /* Find the last element */
         current = list;
-        while (current->next)
+        while (current->next != NULL)
             current = current->next;
         
-        /* Add at the end */
+        /* Attach new element at the end */
         current->next = new_element;
         new_element->prev = current;
     }
     else /* ADD_NODE_FRONT */
     {
-        /* Shift all data one position to the right */
+        /* Save the current head's data */
         new_element->node = list->node;
         new_element->next = list->next;
         new_element->prev = list;
         
+        /* Update existing connections */
         if (list->next)
             list->next->prev = new_element;
         
+        /* Make new node the head */
         list->node = node;
         list->next = new_element;
     }
@@ -115,12 +97,6 @@ int llist_add_node(llist_t *list, void *node, int mode)
     return (0);
 }
 
-/**
- * llist_get_head - Gets the first node's data
- * @list: Pointer to the list
- *
- * Return: Pointer to the first node's data, or NULL
- */
 void *llist_get_head(llist_t *list)
 {
     if (!list)
@@ -128,12 +104,6 @@ void *llist_get_head(llist_t *list)
     return (list->node);
 }
 
-/**
- * llist_get_tail - Gets the last node's data
- * @list: Pointer to the list
- *
- * Return: Pointer to the last node's data, or NULL
- */
 void *llist_get_tail(llist_t *list)
 {
     llist_t *current;
@@ -144,57 +114,52 @@ void *llist_get_tail(llist_t *list)
     current = list;
     while (current->next)
         current = current->next;
+    
     return (current->node);
 }
 
-/**
- * llist_size - Gets the size of the list
- * @list: Pointer to the list
- *
- * Return: Number of nodes in the list
- */
 int llist_size(llist_t *list)
 {
     llist_t *current;
     int count = 0;
     
-    if (!list || !list->node)
+    if (!list)
         return (0);
         
     current = list;
-    while (current)
+    while (current != NULL && current->node != NULL)
     {
-        if (current->node)
-            count++;
+        count++;
         current = current->next;
+        
+        /* Prevent infinite loops */
+        if (count > 1000)
+            return (-1);
     }
     
     return (count);
 }
 
-/**
- * llist_for_each - Applies a function to each node
- * @list: Pointer to the list
- * @func: Function to apply
- * @arg: Additional argument for the function
- *
- * Return: 0 on success, -1 on failure
- */
 int llist_for_each(llist_t *list, int (*func)(void *, unsigned int, void *), void *arg)
 {
     llist_t *current;
     unsigned int index = 0;
     
-    if (!list || !func || !list->node)
+    if (!list || !func)
         return (-1);
         
     current = list;
-    while (current && current->node)
+    while (current != NULL && current->node != NULL)
     {
         if (func(current->node, index, arg) != 0)
             return (-1);
+        
         current = current->next;
         index++;
+        
+        /* Prevent infinite loops */
+        if (index > 1000)
+            return (-1);
     }
     
     return (0);
