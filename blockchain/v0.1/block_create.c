@@ -23,7 +23,7 @@ block_t *block_create(block_t const *prev, int8_t const *data,
 		return (NULL);
 
 	/* Determine how many bytes to copy */
-	copy_len = (data_len > BLOCKCHAIN_DATA_MAX) ? 
+	copy_len = (data_len > BLOCKCHAIN_DATA_MAX) ?
 		BLOCKCHAIN_DATA_MAX : data_len;
 
 	/* Initialize block info */
