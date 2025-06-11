@@ -1,7 +1,7 @@
 #include "llist.h"
 #include <stdlib.h>
 
-/** 
+/**
  * llist_create - Creates a new linked list
  * @mt_support: Multi-threading support flag (ignored for now)
  *
@@ -87,24 +87,32 @@ int llist_add_node(llist_t *list, void *node, int mode)
     
     if (mode == ADD_NODE_REAR)
     {
-        /* Add at rear */
+        /* Find the last node */
         current = list;
         while (current->next)
             current = current->next;
+        
+        /* Add new node at the end */
         current->next = new_node;
         new_node->prev = current;
     }
     else /* ADD_NODE_FRONT */
     {
-        /* Add at front - shift existing data */
-        new_node->node = list->node;
+        /* Insert at the beginning by creating a new head */
+        new_node->next = list;
+        list->prev = new_node;
+        new_node->node = node;
+        
+        /* This approach requires the caller to update their list pointer */
+        /* For now, we'll use the data shifting approach */
+        void *temp_data = list->node;
+        list->node = node;
+        new_node->node = temp_data;
         new_node->next = list->next;
         new_node->prev = list;
         
         if (list->next)
             list->next->prev = new_node;
-            
-        list->node = node;
         list->next = new_node;
     }
     

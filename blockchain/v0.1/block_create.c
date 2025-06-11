@@ -11,8 +11,10 @@
 block_t *block_create(block_t const *prev, int8_t const *data,
                       uint32_t data_len)
 {
-    block_t *new_block;
-    uint32_t copy_len;
+    block_t *new_block = NULL;
+    block_info_t info;
+    block_data_t new_data = {{0}, 0};
+    uint32_t len = data_len;
 
     if (!prev || !data)
         return (NULL);
@@ -21,23 +23,27 @@ block_t *block_create(block_t const *prev, int8_t const *data,
     if (!new_block)
         return (NULL);
 
-    /* Initialize block info */
-    new_block->info.index = prev->info.index + 1;
-    new_block->info.difficulty = 0;
-    new_block->info.timestamp = time(NULL);
-    new_block->info.nonce = 0;
-
-    /* Copy previous block's hash to prev_hash */
-    memcpy(new_block->info.prev_hash, prev->hash, SHA256_DIGEST_LENGTH);
+    /* Limit data length to maximum allowed */
+    if (data_len > BLOCKCHAIN_DATA_MAX)
+        len = BLOCKCHAIN_DATA_MAX;
 
     /* Initialize block data */
-    copy_len = (data_len > BLOCKCHAIN_DATA_MAX) ? BLOCKCHAIN_DATA_MAX : data_len;
-    memset(new_block->data.buffer, 0, BLOCKCHAIN_DATA_MAX);
-    memcpy(new_block->data.buffer, data, copy_len);
-    new_block->data.len = copy_len;
+    memcpy(new_data.buffer, data, len);
+    new_data.len = len;
+
+    /* Initialize block info */
+    info.index = prev->info.index + 1;
+    info.difficulty = 0;
+    info.nonce = 0;
+    memcpy(info.prev_hash, prev->hash, SHA256_DIGEST_LENGTH);
+    info.timestamp = time(NULL);
 
     /* Zero out the hash */
     memset(new_block->hash, 0, SHA256_DIGEST_LENGTH);
+
+    /* Assign structures to new block */
+    new_block->data = new_data;
+    new_block->info = info;
 
     return (new_block);
 }
