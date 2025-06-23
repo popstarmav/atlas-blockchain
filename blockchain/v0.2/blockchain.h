@@ -7,10 +7,13 @@
 #include <string.h>
 #include <time.h>
 
-#include "../../crypto/hblk_crypto.h"
-#include "../../holbertonschool-blockchain/llist/llist.h"
+#include "hblk_crypto.h"
 
 #define SHA256_DIGEST_LENGTH 32
+
+/* Forward declarations for llist types */
+typedef struct llist_s llist_t;
+typedef struct llist_node_s llist_node_t;
 
 /**
  * struct block_info_s - Block info structure
