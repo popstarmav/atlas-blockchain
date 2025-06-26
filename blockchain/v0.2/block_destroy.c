@@ -1,14 +1,23 @@
 #include "blockchain.h"
 
 /**
- * blockchain_destroy - Deallocates a Blockchain structure
- * @blockchain: Pointer to the Blockchain structure to delete
+ * block_destroy - Deallocates a Block
+ * @block: Pointer to the Block to delete
  */
-void blockchain_destroy(blockchain_t *blockchain)
+void block_destroy(block_t *block)
 {
-    if (!blockchain)
+    if (!block)
         return;
 
-    llist_destroy(blockchain->chain, 1, (node_dtor_t)block_destroy);
-    free(blockchain);
+    /* Only free data buffer if it's not the genesis block */
+    /* Genesis block has index 0 and static data */
+    if (block->info.index != 0 && block->data.buffer)
+    {
+        free(block->data.buffer);
+    }
+    
+    /* Free the block itself (but not if it's the static genesis block) */
+    if (block != &_genesis)
+        free(block);
 }
+

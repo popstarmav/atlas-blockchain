@@ -9,14 +9,18 @@ const block_t _genesis = {
         0,    /* difficulty */
         1537578000, /* timestamp */
         0,    /* nonce */
-        {0}   /* prev_hash */
+        {0}   /* prev_hash (all zeros) */
     },
     { /* data */
-        "Holberton School", /* buffer */
+        (int8_t *)"Holberton School", /* buffer - static string */
         16  /* len */
     },
     /* hash */
-    "\xc5\x2c\x26\xc8\xb5\x46\x16\x39\x63\x5d\x8e\xdf\x2a\x97\xd4\x8d"
-    "\x0c\x8e\x00\x09\xc8\x17\xf2\xb1\xd3\xd7\xff\x2f\x04\x51\x58\x03"
+    {
+        0xc5, 0x2c, 0x26, 0xc8, 0xb5, 0x46, 0x16, 0x39,
+        0x63, 0x5d, 0x8e, 0xdf, 0x2a, 0x97, 0xd4, 0x8d,
+        0x0c, 0x8e, 0x00, 0x09, 0xc8, 0x17, 0xf2, 0xb1,
+        0xd3, 0xd7, 0xff, 0x2f, 0x04, 0x51, 0x58, 0x03
+    }
 };
 
