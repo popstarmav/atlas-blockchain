@@ -11,9 +11,13 @@
 
 #define SHA256_DIGEST_LENGTH 32
 
-/**
+/* Difficulty adjustment macros */
+#define BLOCK_GENERATION_INTERVAL 1
+#define DIFFICULTY_ADJUSTMENT_INTERVAL 5
+
+/** 
  * struct block_info_s - Block info structure
- *
+ * 
  * @index:      Index of the Block in the Blockchain
  * @difficulty: Difficulty of proof of work (hash leading zero bits)
  * @timestamp:  Time the Block was created at (UNIX timestamp)
@@ -84,6 +88,7 @@ blockchain_t *blockchain_deserialize(char const *path);
 int block_is_valid(block_t const *block, block_t const *prev_block);
 void block_mine(block_t *block);
 int blockchain_is_valid(blockchain_t const *blockchain);
+uint32_t blockchain_difficulty(blockchain_t const *blockchain);
 void _blockchain_destroy(blockchain_t *blockchain);
 void _blockchain_print_brief(blockchain_t const *blockchain);
 
