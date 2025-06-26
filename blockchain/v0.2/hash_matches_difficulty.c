@@ -30,7 +30,7 @@ int hash_matches_difficulty(uint8_t const hash[SHA256_DIGEST_LENGTH],
 			byte_index++;
 			continue;
 		}
-		
+
 		/* Count leading zero bits in current byte */
 		for (bit_index = 7; bit_index >= 0; bit_index--)
 		{
