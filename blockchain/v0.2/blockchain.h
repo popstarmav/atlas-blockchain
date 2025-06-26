@@ -6,14 +6,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-
 #include "hblk_crypto.h"
+#include "llist.h"
 
 #define SHA256_DIGEST_LENGTH 32
-
-/* Forward declarations for llist types */
-typedef struct llist_s llist_t;
-typedef struct llist_node_s llist_node_t;
 
 /**
  * struct block_info_s - Block info structure
@@ -26,11 +22,11 @@ typedef struct llist_node_s llist_node_t;
  */
 typedef struct block_info_s
 {
-	uint32_t    index;
-	uint32_t    difficulty;
-	uint64_t    timestamp;
-	uint64_t    nonce;
-	uint8_t     prev_hash[SHA256_DIGEST_LENGTH];
+    uint32_t    index;
+    uint32_t    difficulty;
+    uint64_t    timestamp;
+    uint64_t    nonce;
+    uint8_t     prev_hash[SHA256_DIGEST_LENGTH];
 } block_info_t;
 
 /**
@@ -41,8 +37,8 @@ typedef struct block_info_s
  */
 typedef struct block_data_s
 {
-	void    *buffer;
-	uint32_t len;
+    void    *buffer;
+    uint32_t len;
 } block_data_t;
 
 /**
@@ -54,9 +50,9 @@ typedef struct block_data_s
  */
 typedef struct block_s
 {
-	block_info_t info; /* This must stay first */
-	block_data_t data; /* This must stay second */
-	uint8_t      hash[SHA256_DIGEST_LENGTH];
+    block_info_t info; /* This must stay first */
+    block_data_t data; /* This must stay second */
+    uint8_t      hash[SHA256_DIGEST_LENGTH];
 } block_t;
 
 /**
@@ -66,12 +62,15 @@ typedef struct block_s
  */
 typedef struct blockchain_s
 {
-	llist_t *chain;
+    llist_t *chain;
 } blockchain_t;
+
+/* Genesis block declaration */
+extern const block_t _genesis;
 
 /* Function prototypes */
 int hash_matches_difficulty(uint8_t const hash[SHA256_DIGEST_LENGTH],
-			    uint32_t difficulty);
+                            uint32_t difficulty);
 
 /* Other function prototypes */
 blockchain_t *blockchain_create(void);
@@ -79,13 +78,14 @@ block_t *block_create(block_t const *prev, int8_t const *data, uint32_t data_len
 void block_destroy(block_t *block);
 void blockchain_destroy(blockchain_t *blockchain);
 uint8_t *block_hash(block_t const *block,
-		    uint8_t digest[SHA256_DIGEST_LENGTH]);
+                    uint8_t digest[SHA256_DIGEST_LENGTH]);
 int blockchain_serialize(blockchain_t const *blockchain, char const *path);
 blockchain_t *blockchain_deserialize(char const *path);
 int block_is_valid(block_t const *block, block_t const *prev_block);
 void block_mine(block_t *block);
 int blockchain_is_valid(blockchain_t const *blockchain);
 void _blockchain_destroy(blockchain_t *blockchain);
+void _blockchain_print_brief(blockchain_t const *blockchain);
 
 #endif /* BLOCKCHAIN_H */
 

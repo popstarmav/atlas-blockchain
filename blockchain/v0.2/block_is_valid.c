@@ -10,7 +10,7 @@
 int block_is_valid(block_t const *block, block_t const *prev_block)
 {
     uint8_t hash_buf[SHA256_DIGEST_LENGTH];
-    int i;
+    uint32_t i;
 
     if (!block)
         return (0);
@@ -46,4 +46,5 @@ int block_is_valid(block_t const *block, block_t const *prev_block)
 
     return (1);
 }
+
 
