@@ -7,7 +7,8 @@
  *
  * Return: 1 if the difficulty is respected, 0 otherwise
  */
-int hash_matches_difficulty(uint8_t const hash[SHA256_DIGEST_LENGTH], uint32_t difficulty)
+int hash_matches_difficulty(uint8_t const hash[SHA256_DIGEST_LENGTH],
+		uint32_t difficulty)
 {
 	uint32_t leading_zeros = 0;
 	uint32_t byte_index = 0;
@@ -21,7 +22,7 @@ int hash_matches_difficulty(uint8_t const hash[SHA256_DIGEST_LENGTH], uint32_t d
 	while (byte_index < SHA256_DIGEST_LENGTH && leading_zeros < difficulty)
 	{
 		current_byte = hash[byte_index];
-		
+
 		/* If entire byte is zero, add 8 to count */
 		if (current_byte == 0)
 		{
