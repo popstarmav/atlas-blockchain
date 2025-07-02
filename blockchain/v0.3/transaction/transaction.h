@@ -3,7 +3,10 @@
 
 #include <stdint.h>
 #include <openssl/sha.h>
+#include <llist.h>
 #include "hblk_crypto.h"
+
+#define COINBASE_AMOUNT 50
 
 /**
  * struct tx_out_s - Transaction output
@@ -18,8 +21,57 @@ typedef struct tx_out_s
     uint8_t  hash[SHA256_DIGEST_LENGTH];
 } tx_out_t;
 
+/**
+ * struct tx_in_s - Transaction input
+ * @block_hash:  Hash of the Block containing the transaction
+ * @tx_id:       ID of the transaction containing @tx_out_hash
+ * @tx_out_hash: Hash of the referenced transaction output
+ * @sig:         Signature of the transaction input
+ */
+typedef struct tx_in_s
+{
+    uint8_t block_hash[SHA256_DIGEST_LENGTH];
+    uint8_t tx_id[SHA256_DIGEST_LENGTH];
+    uint8_t tx_out_hash[SHA256_DIGEST_LENGTH];
+    sig_t   sig;
+} tx_in_t;
+
+/**
+ * struct transaction_s - Transaction structure
+ * @id:      Transaction ID
+ * @inputs:  List of transaction inputs
+ * @outputs: List of transaction outputs
+ */
+typedef struct transaction_s
+{
+    uint8_t id[SHA256_DIGEST_LENGTH];
+    llist_t *inputs;
+    llist_t *outputs;
+} transaction_t;
+
+/**
+ * struct unspent_tx_out_s - Unspent transaction output
+ * @block_hash: Hash of the Block containing the transaction
+ * @tx_id:      ID of the transaction containing @out
+ * @out:        Copy of the referenced transaction output
+ */
+typedef struct unspent_tx_out_s
+{
+    uint8_t   block_hash[SHA256_DIGEST_LENGTH];
+    uint8_t   tx_id[SHA256_DIGEST_LENGTH];
+    tx_out_t  out;
+} unspent_tx_out_t;
+
 /* Function prototypes */
 tx_out_t *tx_out_create(uint32_t amount, uint8_t const pub[EC_PUB_LEN]);
+
+/* Print functions */
+void _transaction_print(transaction_t const *transaction);
+void _transaction_print_brief(transaction_t const *transaction);
+int _transaction_print_loop(transaction_t const *transaction,
+    unsigned int idx, char const *indent);
+int _transaction_print_brief_loop(transaction_t const *transaction,
+    unsigned int idx, char const *indent);
 
 #endif /* _TRANSACTION_H_ */
 
