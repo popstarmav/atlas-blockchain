@@ -31,7 +31,7 @@ typedef struct block_info_s
  */
 typedef struct block_data_s
 {
-    void        *buffer;
+    char        *buffer;  /* Changed from void* to char* */
     uint32_t    len;
 } block_data_t;
 
@@ -67,7 +67,7 @@ typedef struct blockchain_s
 /* Genesis Block */
 extern block_t const _genesis;
 
-/* Print functions */
+/* Function prototypes */
 void _blockchain_print(blockchain_t const *blockchain);
 void _blockchain_print_brief(blockchain_t const *blockchain);
 
