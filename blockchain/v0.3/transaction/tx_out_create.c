@@ -12,22 +12,22 @@
 tx_out_t *tx_out_create(uint32_t amount, uint8_t const pub[EC_PUB_LEN])
 {
 	tx_out_t *tx_out;
-	
+
 	if (!pub)
 		return (NULL);
-	
+
 	tx_out = malloc(sizeof(tx_out_t));
-	
+
 	if (!tx_out)
 		return (NULL);
-	
+
 	tx_out->amount = amount;
 	memcpy(tx_out->pub, pub, EC_PUB_LEN);
-	
+
 	/* Compute hash of the transaction output */
 	if (!sha256((int8_t const *)tx_out,
-				sizeof(tx_out->amount) + EC_PUB_LEN,
-                tx_out->hash))
+				sizeof(tx_out->amount) + 
+	EC_PUB_LEN,tx_out->hash))
 	{
 		free(tx_out);
 		return (NULL);
