@@ -5,7 +5,7 @@
  * tx_in_create - Allocates and initializes a transaction input structure
  * @unspent: Pointer to the unspent transaction output to be converted
  *
- * Return: Pointer to the created transaction 
+ * Return: Pointer to the created transaction
  * input upon success, or NULL upon failure
  */
 tx_in_t *tx_in_create(unspent_tx_out_t const *unspent)
