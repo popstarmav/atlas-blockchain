@@ -77,6 +77,7 @@ int _transaction_print_loop(transaction_t const *transaction,
     unsigned int idx, char const *indent);
 int _transaction_print_brief_loop(transaction_t const *transaction,
     unsigned int idx, char const *indent);
+tx_in_t *tx_in_create(unspent_tx_out_t const *unspent);
 
 unspent_tx_out_t *unspent_tx_out_create(uint8_t block_hash[SHA256_DIGEST_LENGTH],
                 uint8_t tx_id[SHA256_DIGEST_LENGTH], tx_out_t const *out);
