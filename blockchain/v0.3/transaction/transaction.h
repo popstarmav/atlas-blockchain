@@ -4,11 +4,16 @@
 #include <stdint.h>
 #include <openssl/sha.h>
 #include <llist.h>
+
+/* Suppress OpenSSL deprecation warnings */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "hblk_crypto.h"
+#pragma GCC diagnostic pop
 
 #define COINBASE_AMOUNT 50
 
-/**
+/** 
  * struct tx_out_s - Transaction output
  * @amount: Amount in the transaction output
  * @pub:    Receiver's public key
@@ -21,7 +26,7 @@ typedef struct tx_out_s
     uint8_t  hash[SHA256_DIGEST_LENGTH];
 } tx_out_t;
 
-/**
+/** 
  * struct tx_in_s - Transaction input
  * @block_hash:  Hash of the Block containing the transaction
  * @tx_id:       ID of the transaction containing @tx_out_hash
@@ -36,7 +41,7 @@ typedef struct tx_in_s
     sig_t   sig;
 } tx_in_t;
 
-/**
+/** 
  * struct transaction_s - Transaction structure
  * @id:      Transaction ID
  * @inputs:  List of transaction inputs
@@ -49,7 +54,7 @@ typedef struct transaction_s
     llist_t *outputs;
 } transaction_t;
 
-/**
+/** 
  * struct unspent_tx_out_s - Unspent transaction output
  * @block_hash: Hash of the Block containing the transaction
  * @tx_id:      ID of the transaction containing @out
@@ -72,6 +77,9 @@ int _transaction_print_loop(transaction_t const *transaction,
     unsigned int idx, char const *indent);
 int _transaction_print_brief_loop(transaction_t const *transaction,
     unsigned int idx, char const *indent);
+
+unspent_tx_out_t *unspent_tx_out_create(uint8_t block_hash[SHA256_DIGEST_LENGTH],
+                uint8_t tx_id[SHA256_DIGEST_LENGTH], tx_out_t const *out);
 
 #endif /* _TRANSACTION_H_ */
 
