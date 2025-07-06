@@ -16,7 +16,6 @@ sig_t *tx_in_sign(tx_in_t *in, uint8_t const tx_id[SHA256_DIGEST_LENGTH],
 	uint8_t sender_pub[EC_PUB_LEN];
 	unspent_tx_out_t *unspent;
 	int i, list_size;
-	int found_match = 0;
 
 	if (!in || !tx_id || !sender || !all_unspent)
 		return (NULL);
@@ -40,22 +39,19 @@ sig_t *tx_in_sign(tx_in_t *in, uint8_t const tx_id[SHA256_DIGEST_LENGTH],
 		    memcmp(unspent->tx_id, in->tx_id, (size_t)SHA256_DIGEST_LENGTH) == 0 &&
 		    memcmp(unspent->out.hash, in->tx_out_hash, (size_t)SHA256_DIGEST_LENGTH) == 0)
 		{
-			found_match = 1;
 			/* Verify that sender's public key matches the output's public key */
 			if (memcmp(sender_pub, unspent->out.pub, (size_t)EC_PUB_LEN) != 0)
 				return (NULL);
-			break;
+
+			/* Sign the transaction ID */
+			if (!ec_sign(sender, tx_id, SHA256_DIGEST_LENGTH, &in->sig))
+				return (NULL);
+
+			return (&in->sig);
 		}
 	}
 
-	/* If no matching unspent output found, return NULL */
-	if (!found_match)
-		return (NULL);
-
-	/* Sign the transaction ID */
-	if (!ec_sign(sender, tx_id, SHA256_DIGEST_LENGTH, &in->sig))
-		return (NULL);
-
-	return (&in->sig);
+	/* No matching unspent output found */
+	return (NULL);
 }
 
