@@ -73,8 +73,11 @@ int main(void)
     else
         fprintf(stderr, "Signature invalid\n");
 
-    /* Cleanup - Use ec_free instead of deprecated EC_KEY_free */
-    ec_free(owner);
+    /* Cleanup - Suppress deprecation warning for this specific line */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    EC_KEY_free(owner);
+#pragma GCC diagnostic pop
     free(out);
     llist_destroy(all_unspent, 1, free);
     free(in);
