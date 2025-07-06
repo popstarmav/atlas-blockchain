@@ -17,7 +17,7 @@ sig_t *tx_in_sign(tx_in_t *in, uint8_t const tx_id[SHA256_DIGEST_LENGTH],
 	uint8_t sender_pub[EC_PUB_LEN];
 	int i, list_size;
 
-	/* Validate all required parameters */
+	/* Validate input parameters */
 	if (!in || !tx_id || !sender || !all_unspent)
 		return (NULL);
 
@@ -25,36 +25,39 @@ sig_t *tx_in_sign(tx_in_t *in, uint8_t const tx_id[SHA256_DIGEST_LENGTH],
 	if (!ec_to_pub(sender, sender_pub))
 		return (NULL);
 
-	/* Find the matching UTXO */
+	/* Find the UTXO that matches the input's tx_out_hash */
 	list_size = llist_size(all_unspent);
 	utxo = NULL;
-	
+
 	for (i = 0; i < list_size; i++)
 	{
 		utxo = (unspent_tx_out_t *)llist_get_node_at(all_unspent, i);
 		if (!utxo)
 			continue;
-			
+
+		/* Compare the UTXO's output hash with the input's reference */
 		if (memcmp(utxo->out.hash, in->tx_out_hash, SHA256_DIGEST_LENGTH) == 0)
 			break;
+		
 		utxo = NULL;
 	}
 
-	/* UTXO not found */
+	/* If no matching UTXO found, cannot sign */
 	if (!utxo)
 		return (NULL);
 
-	/* 
-	 * OWNERSHIP CHECK: Compare sender's public key with UTXO's public key
-	 * If they don't match, the sender doesn't own this UTXO
+	/*
+	 * CRITICAL OWNERSHIP CHECK:
+	 * Compare sender's public key with the UTXO's public key
+	 * If they don't match, sender doesn't own this UTXO and cannot spend it
 	 */
 	if (memcmp(sender_pub, utxo->out.pub, EC_PUB_LEN) != 0)
 		return (NULL);
 
-	/* Initialize signature */
+	/* Clear signature structure */
 	memset(&in->sig, 0, sizeof(sig_t));
 
-	/* Sign the transaction */
+	/* Sign the transaction ID with sender's private key */
 	if (!ec_sign(sender, tx_id, SHA256_DIGEST_LENGTH, &in->sig))
 		return (NULL);
 
