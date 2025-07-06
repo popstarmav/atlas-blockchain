@@ -1,3 +1,4 @@
+#include <string.h>
 #include "blockchain.h"
 
 /**
@@ -34,12 +35,12 @@ sig_t *tx_in_sign(tx_in_t *in, uint8_t const tx_id[SHA256_DIGEST_LENGTH],
 			continue;
 
 		/* Check if this unspent output matches our input */
-		if (memcmp(unspent->block_hash, in->block_hash, SHA256_DIGEST_LENGTH) == 0 &&
-		    memcmp(unspent->tx_id, in->tx_id, SHA256_DIGEST_LENGTH) == 0 &&
-		    memcmp(unspent->out.hash, in->tx_out_hash, SHA256_DIGEST_LENGTH) == 0)
+		if (memcmp(unspent->block_hash, in->block_hash, (size_t)SHA256_DIGEST_LENGTH) == 0 &&
+		    memcmp(unspent->tx_id, in->tx_id, (size_t)SHA256_DIGEST_LENGTH) == 0 &&
+		    memcmp(unspent->out.hash, in->tx_out_hash, (size_t)SHA256_DIGEST_LENGTH) == 0)
 		{
 			/* Verify that sender's public key matches the output's public key */
-			if (memcmp(sender_pub, unspent->out.pub, EC_PUB_LEN) != 0)
+			if (memcmp(sender_pub, unspent->out.pub, (size_t)EC_PUB_LEN) != 0)
 				return (NULL);
 
 			/* Sign the transaction ID */
