@@ -1,77 +1,191 @@
-#include <string.h>
 #include <stdlib.h>
-#include "blockchain.h"
+#include <string.h>
+#include "transaction.h"
 
 /**
- * transaction_hash - Computes the ID (hash) of a transaction
- * @transaction: Pointer to the transaction to compute the hash of
- * @hash_buf: Buffer in which to store the computed hash
- *
- * Return: Pointer to hash_buf
+ * struct tx_data_s - Helper structure for transaction creation
+ * @pub: Sender's public key
+ * @needed: Amount needed for the transaction
+ * @amount_total: Total amount collected from UTXOs
+ * @txt: Pointer to the transaction being built
+ * @sender: Sender's private key
+ * @all_unspent: List of all unspent outputs
  */
-uint8_t *transaction_hash(transaction_t const *transaction,
-			  uint8_t hash_buf[SHA256_DIGEST_LENGTH])
+typedef struct tx_data_s
 {
-	uint8_t *buffer, *ptr;
-	size_t buffer_size;
-	int inputs_count, outputs_count, i;
-	tx_in_t *input;
-	tx_out_t *output;
+    uint8_t pub[EC_PUB_LEN];
+    uint32_t needed;
+    uint32_t amount_total;
+    transaction_t *txt;
+    EC_KEY const *sender;
+    llist_t *all_unspent;
+} tx_data_t;
 
-	if (!transaction || !hash_buf)
-		return (NULL);
+/**
+ * build_transaction - builds the transaction inputs
+ * @node: the node in the unspent list
+ * @i: unused iter
+ * @txt_data: transaction data struct
+ *
+ * Return: 0 to continue, 1 when done
+ */
+static int build_transaction(llist_node_t node, unsigned int i, void *txt_data)
+{
+    (void)i;
+    unspent_tx_out_t *utxo = node;
+    tx_data_t *data = txt_data;
+    tx_in_t *in;
 
-	inputs_count = llist_size(transaction->inputs);
-	outputs_count = llist_size(transaction->outputs);
+    if (data->needed <= data->amount_total || !utxo)
+        return (1);
 
-	/* Calculate buffer size: inputs (96 bytes each) + outputs (32 bytes each) */
-	buffer_size = (inputs_count * (SHA256_DIGEST_LENGTH * 3)) +
-		      (outputs_count * SHA256_DIGEST_LENGTH);
+    if (memcmp(data->pub, utxo->out.pub, EC_PUB_LEN) == 0)
+    {
+        in = tx_in_create(utxo);
+        if (!in)
+            return (1);
+        llist_add_node(data->txt->inputs, in, ADD_NODE_REAR);
+        data->amount_total += utxo->out.amount;
+    }
+    return (0);
+}
 
-	buffer = malloc(buffer_size);
-	if (!buffer)
-		return (NULL);
+/**
+ * sign_ins - signs all the inputs
+ * @node: the node in the inputs list
+ * @i: unused iter
+ * @txt_data: transaction data struct
+ *
+ * Return: 0 to continue, 1 on error
+ */
+static int sign_ins(llist_node_t node, unsigned int i, void *txt_data)
+{
+    (void)i;
+    tx_in_t *in = node;
+    tx_data_t *data = txt_data;
 
-	ptr = buffer;
+    if (!in)
+        return (1);
 
-	/* Copy input data: block_hash + tx_id + tx_out_hash for each input */
-	for (i = 0; i < inputs_count; i++)
-	{
-		input = llist_get_node_at(transaction->inputs, i);
-		if (!input)
-		{
-			free(buffer);
-			return (NULL);
-		}
+    if (!tx_in_sign(in, data->txt->id, data->sender, data->all_unspent))
+        return (1);
 
-		memcpy(ptr, input->block_hash, SHA256_DIGEST_LENGTH);
-		ptr += SHA256_DIGEST_LENGTH;
+    return (0);
+}
 
-		memcpy(ptr, input->tx_id, SHA256_DIGEST_LENGTH);
-		ptr += SHA256_DIGEST_LENGTH;
+/**
+ * transaction_create - Creates a transaction
+ * @sender: Contains the private key of the transaction sender
+ * @receiver: Contains the public key of the transaction receiver
+ * @amount: Amount to send
+ * @all_unspent: List of all unspent outputs to date
+ *
+ * Return: Pointer to the created transaction upon success, or NULL upon failure
+ */
+transaction_t *transaction_create(EC_KEY const *sender, EC_KEY const *receiver,
+                                  uint32_t amount, llist_t *all_unspent)
+{
+    transaction_t *transaction;
+    tx_data_t *data;
+    tx_out_t *out;
+    uint8_t receiver_pub[EC_PUB_LEN];
 
-		memcpy(ptr, input->tx_out_hash, SHA256_DIGEST_LENGTH);
-		ptr += SHA256_DIGEST_LENGTH;
-	}
+    if (!sender || !receiver || !amount || !all_unspent)
+        return (NULL);
 
-	/* Copy output data: hash for each output */
-	for (i = 0; i < outputs_count; i++)
-	{
-		output = llist_get_node_at(transaction->outputs, i);
-		if (!output)
-		{
-			free(buffer);
-			return (NULL);
-		}
+    transaction = calloc(1, sizeof(transaction_t));
+    if (!transaction)
+        return (NULL);
 
-		memcpy(ptr, output->hash, SHA256_DIGEST_LENGTH);
-		ptr += SHA256_DIGEST_LENGTH;
-	}
+    data = calloc(1, sizeof(tx_data_t));
+    if (!data)
+    {
+        free(transaction);
+        return (NULL);
+    }
 
-	/* Compute SHA256 hash of the buffer */
-	sha256((int8_t *)buffer, buffer_size, hash_buf);
+    /* Initialize data structure */
+    if (!ec_to_pub(sender, data->pub) || !ec_to_pub(receiver, receiver_pub))
+    {
+        free(transaction);
+        free(data);
+        return (NULL);
+    }
 
-	free(buffer);
-	return (hash_buf);
+    data->needed = amount;
+    data->txt = transaction;
+    data->sender = sender;
+    data->all_unspent = all_unspent;
+    data->amount_total = 0;
+
+    /* Create input and output lists */
+    transaction->inputs = llist_create(MT_SUPPORT_FALSE);
+    transaction->outputs = llist_create(MT_SUPPORT_FALSE);
+    if (!transaction->inputs || !transaction->outputs)
+    {
+        if (transaction->inputs)
+            llist_destroy(transaction->inputs, 0, NULL);
+        if (transaction->outputs)
+            llist_destroy(transaction->outputs, 0, NULL);
+        free(transaction);
+        free(data);
+        return (NULL);
+    }
+
+    /* Collect UTXOs belonging to sender */
+    llist_for_each(all_unspent, build_transaction, data);
+
+    /* Check if we have enough funds */
+    if (data->amount_total < data->needed)
+    {
+        llist_destroy(transaction->inputs, 1, free);
+        llist_destroy(transaction->outputs, 1, free);
+        free(transaction);
+        free(data);
+        return (NULL);
+    }
+
+    /* Create output for receiver */
+    out = tx_out_create(data->needed, receiver_pub);
+    if (!out)
+    {
+        llist_destroy(transaction->inputs, 1, free);
+        llist_destroy(transaction->outputs, 1, free);
+        free(transaction);
+        free(data);
+        return (NULL);
+    }
+    llist_add_node(transaction->outputs, out, ADD_NODE_REAR);
+
+    /* Create change output if necessary */
+    if (data->amount_total != data->needed)
+    {
+        out = tx_out_create(data->amount_total - data->needed, data->pub);
+        if (!out)
+        {
+            llist_destroy(transaction->inputs, 1, free);
+            llist_destroy(transaction->outputs, 1, free);
+            free(transaction);
+            free(data);
+            return (NULL);
+        }
+        llist_add_node(transaction->outputs, out, ADD_NODE_REAR);
+    }
+
+    /* Compute transaction hash */
+    if (!transaction_hash(transaction, transaction->id))
+    {
+        llist_destroy(transaction->inputs, 1, free);
+        llist_destroy(transaction->outputs, 1, free);
+        free(transaction);
+        free(data);
+        return (NULL);
+    }
+
+    /* Sign all inputs */
+    llist_for_each(transaction->inputs, sign_ins, data);
+
+    free(data);
+    return (transaction);
 }
 
