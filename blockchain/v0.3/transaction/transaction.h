@@ -67,6 +67,25 @@ typedef struct unspent_tx_out_s
     tx_out_t  out;
 } unspent_tx_out_t;
 
+/**
+ * struct tx_data_s - Helper structure for transaction creation
+ * @pub: Sender's public key
+ * @needed: Amount needed for the transaction
+ * @amount_total: Total amount collected from UTXOs
+ * @txt: Pointer to the transaction being built
+ * @sender: Sender's private key
+ * @all_unspent: List of all unspent outputs
+ */
+typedef struct tx_data_s
+{
+    uint8_t pub[EC_PUB_LEN];
+    uint32_t needed;
+    uint32_t amount_total;
+    transaction_t *txt;
+    EC_KEY const *sender;
+    llist_t *all_unspent;
+} tx_data_t;
+
 /* Function prototypes */
 tx_out_t *tx_out_create(uint32_t amount, uint8_t const pub[EC_PUB_LEN]);
 
