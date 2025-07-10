@@ -101,7 +101,8 @@ transaction_t *coinbase_create(EC_KEY const *receiver, uint32_t block_index)
 	}
 
 	tx_out = tx_out_create(COINBASE_AMOUNT, receiver_pub);
-	if (!tx_out || llist_add_node(transaction->outputs, tx_out, ADD_NODE_REAR) != 0)
+	if (!tx_out || llist_add_node(transaction->outputs,
+				tx_out, ADD_NODE_REAR) != 0)
 	{
 		cleanup_transaction(transaction, NULL, tx_out);
 		return (NULL);
