@@ -4,6 +4,9 @@
 #include <llist.h>
 #include <stdint.h>
 #include <openssl/sha.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 #define BLOCKCHAIN_DATA_MAX 1024
 
@@ -70,6 +73,10 @@ extern block_t const _genesis;
 /* Function prototypes */
 void _blockchain_print(blockchain_t const *blockchain);
 void _blockchain_print_brief(blockchain_t const *blockchain);
+
+/* Block functions */
+block_t *block_create(block_t const *prev, int8_t const *data, uint32_t data_len);
+void block_destroy(block_t *block);
 
 #endif /* _BLOCKCHAIN_H_ */
 
