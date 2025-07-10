@@ -91,6 +91,7 @@ tx_out_t *tx_out_create(uint32_t amount, uint8_t const pub[EC_PUB_LEN]);
 
 /* Print functions */
 void _transaction_print(transaction_t const *transaction);
+void transaction_destroy(transaction_t *transaction);
 void _transaction_print_brief(transaction_t const *transaction);
 int _transaction_print_loop(transaction_t const *transaction,
     unsigned int idx, char const *indent);
