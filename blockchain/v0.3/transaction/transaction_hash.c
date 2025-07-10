@@ -28,7 +28,8 @@ static size_t calculate_buffer_size(transaction_t const *transaction)
  * Return: Pointer to the next position in buffer after copied data,
  * or NULL on failure
  */
-static uint8_t *copy_inputs_data(transaction_t const *transaction, uint8_t *buffer)
+static uint8_t *copy_inputs_data(transaction_t const *transaction,
+		uint8_t *buffer)
 {
 	tx_in_t *input;
 	int i, inputs_count;
