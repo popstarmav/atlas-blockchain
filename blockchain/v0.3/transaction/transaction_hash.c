@@ -16,8 +16,8 @@ static size_t calculate_buffer_size(transaction_t const *transaction)
 	outputs_count = llist_size(transaction->outputs);
 
 	/* Calculate buffer size: inputs (96 bytes each) + outputs (32 bytes each) */
-	return (inputs_count * (SHA256_DIGEST_LENGTH * 3)) +
-		(outputs_count * SHA256_DIGEST_LENGTH);
+	return ((inputs_count * (SHA256_DIGEST_LENGTH * 3)) +
+		(outputs_count * SHA256_DIGEST_LENGTH));
 }
 
 /**
@@ -25,7 +25,8 @@ static size_t calculate_buffer_size(transaction_t const *transaction)
  * @transaction: Pointer to the transaction
  * @buffer: Buffer to copy data to
  *
- * Return: Pointer to the next position in buffer after copied data, or NULL on failure
+ * Return: Pointer to the next position in buffer after copied data,
+ * or NULL on failure
  */
 static uint8_t *copy_inputs_data(transaction_t const *transaction, uint8_t *buffer)
 {
