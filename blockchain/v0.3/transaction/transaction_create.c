@@ -133,6 +133,61 @@ static int create_transaction_outputs(transaction_t *transaction,
 }
 
 /**
+ * cleanup_transaction - Cleans up transaction resources
+ * @transaction: Transaction to clean up
+ * @data: Transaction data to free
+ */
+static void cleanup_transaction(transaction_t *transaction, tx_data_t *data)
+{
+	if (transaction->inputs)
+		llist_destroy(transaction->inputs, 1, free);
+	if (transaction->outputs)
+		llist_destroy(transaction->outputs, 1, free);
+	free(transaction);
+	free(data);
+}
+
+/**
+ * create_and_prepare_transaction - Creates and prepares transaction structure
+ * @sender: Sender's private key
+ * @receiver: Receiver's public key
+ * @amount: Amount to send
+ * @all_unspent: List of all unspent outputs
+ *
+ * Return: Pointer to prepared transaction data, or NULL on failure
+ */
+static tx_data_t *create_and_prepare_transaction(
+	EC_KEY const *sender, EC_KEY const *receiver,
+	uint32_t amount, llist_t *all_unspent)
+{
+	transaction_t *transaction;
+	tx_data_t *data;
+	uint8_t receiver_pub[EC_PUB_LEN];
+
+	transaction = calloc(1, sizeof(transaction_t));
+	if (!transaction)
+		return (NULL);
+
+	data = calloc(1, sizeof(tx_data_t));
+	if (!data)
+	{
+		free(transaction);
+		return (NULL);
+	}
+
+	if (!ec_to_pub(receiver, receiver_pub) ||
+		!init_transaction_data(data, transaction, sender, receiver,
+			amount, all_unspent))
+	{
+		free(transaction);
+		free(data);
+		return (NULL);
+	}
+
+	return (data);
+}
+
+/**
  * transaction_create - Creates a transaction
  * @sender: Contains the private key of the transaction sender
  * @receiver: Contains the public key of the transaction receiver
@@ -151,22 +206,14 @@ transaction_t *transaction_create(EC_KEY const *sender, EC_KEY const *receiver,
 	if (!sender || !receiver || !amount || !all_unspent)
 		return (NULL);
 
-	transaction = calloc(1, sizeof(transaction_t));
-	if (!transaction)
-		return (NULL);
-
-	data = calloc(1, sizeof(tx_data_t));
+	data = create_and_prepare_transaction(sender, receiver, amount, all_unspent);
 	if (!data)
-	{
-		free(transaction);
 		return (NULL);
-	}
 
-	if (!ec_to_pub(receiver, receiver_pub) ||
-		!init_transaction_data(data, transaction, sender, receiver, amount, all_unspent))
+	transaction = data->txt;
+	if (!ec_to_pub(receiver, receiver_pub))
 	{
-		free(transaction);
-		free(data);
+		cleanup_transaction(transaction, data);
 		return (NULL);
 	}
 
@@ -177,20 +224,14 @@ transaction_t *transaction_create(EC_KEY const *sender, EC_KEY const *receiver,
 	if (data->amount_total < data->needed ||
 		!create_transaction_outputs(transaction, data, receiver_pub))
 	{
-		llist_destroy(transaction->inputs, 1, free);
-		llist_destroy(transaction->outputs, 1, free);
-		free(transaction);
-		free(data);
+		cleanup_transaction(transaction, data);
 		return (NULL);
 	}
 
 	/* Compute transaction hash */
 	if (!transaction_hash(transaction, transaction->id))
 	{
-		llist_destroy(transaction->inputs, 1, free);
-		llist_destroy(transaction->outputs, 1, free);
-		free(transaction);
-		free(data);
+		cleanup_transaction(transaction, data);
 		return (NULL);
 	}
 
