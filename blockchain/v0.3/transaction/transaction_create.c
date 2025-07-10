@@ -2,6 +2,7 @@
 #include <string.h>
 #include "transaction.h"
 
+
 /**
  * build_transaction - builds the transaction inputs
  * @node: the node in the unspent list
@@ -57,34 +58,16 @@ static int sign_ins(llist_node_t node, unsigned int i, void *txt_data)
 }
 
 /**
- * init_transaction_data - Initializes transaction data structure
- * @data: Pointer to data structure to initialize
- * @transaction: Pointer to transaction
- * @sender: Sender's private key
- * @receiver: Receiver's public key
- * @amount: Amount to send
- * @all_unspent: List of all unspent outputs
+ * create_transaction_lists - Creates input and output lists
+ * @transaction: Transaction to initialize
  *
  * Return: 1 on success, 0 on failure
  */
-static int init_transaction_data(tx_data_t *data, transaction_t *transaction,
-	EC_KEY const *sender, EC_KEY const *receiver,
-	uint32_t amount, llist_t *all_unspent)
+static int create_transaction_lists(transaction_t *transaction)
 {
-	uint8_t receiver_pub[EC_PUB_LEN];
-
-	if (!ec_to_pub(sender, data->pub) || !ec_to_pub(receiver, receiver_pub))
-		return (0);
-
-	data->needed = amount;
-	data->txt = transaction;
-	data->sender = sender;
-	data->all_unspent = all_unspent;
-	data->amount_total = 0;
-
-	/* Create input and output lists */
 	transaction->inputs = llist_create(MT_SUPPORT_FALSE);
 	transaction->outputs = llist_create(MT_SUPPORT_FALSE);
+
 	if (!transaction->inputs || !transaction->outputs)
 		return (0);
 
@@ -92,99 +75,16 @@ static int init_transaction_data(tx_data_t *data, transaction_t *transaction,
 }
 
 /**
- * create_transaction_outputs - Creates transaction outputs
- * @transaction: Pointer to transaction
- * @data: Transaction data
- * @receiver_pub: Receiver's public key
- *
- * Return: 1 on success, 0 on failure
- */
-static int create_transaction_outputs(transaction_t *transaction,
-	tx_data_t *data, uint8_t receiver_pub[EC_PUB_LEN])
-{
-	tx_out_t *out;
-
-	/* Create output for receiver */
-	out = tx_out_create(data->needed, receiver_pub);
-	if (!out)
-		return (0);
-
-	if (llist_add_node(transaction->outputs, out, ADD_NODE_REAR) != 0)
-	{
-		free(out);
-		return (0);
-	}
-
-	/* Create change output if necessary */
-	if (data->amount_total != data->needed)
-	{
-		out = tx_out_create(data->amount_total - data->needed, data->pub);
-		if (!out)
-			return (0);
-
-		if (llist_add_node(transaction->outputs, out, ADD_NODE_REAR) != 0)
-		{
-			free(out);
-			return (0);
-		}
-	}
-
-	return (1);
-}
-
-/**
  * cleanup_transaction - Cleans up transaction resources
  * @transaction: Transaction to clean up
- * @data: Transaction data to free
  */
-static void cleanup_transaction(transaction_t *transaction, tx_data_t *data)
+static void cleanup_transaction(transaction_t *transaction)
 {
 	if (transaction->inputs)
 		llist_destroy(transaction->inputs, 1, free);
 	if (transaction->outputs)
 		llist_destroy(transaction->outputs, 1, free);
 	free(transaction);
-	free(data);
-}
-
-/**
- * create_and_prepare_transaction - Creates and prepares transaction structure
- * @sender: Sender's private key
- * @receiver: Receiver's public key
- * @amount: Amount to send
- * @all_unspent: List of all unspent outputs
- *
- * Return: Pointer to prepared transaction data, or NULL on failure
- */
-static tx_data_t *create_and_prepare_transaction(
-	EC_KEY const *sender, EC_KEY const *receiver,
-	uint32_t amount, llist_t *all_unspent)
-{
-	transaction_t *transaction;
-	tx_data_t *data;
-	uint8_t receiver_pub[EC_PUB_LEN];
-
-	transaction = calloc(1, sizeof(transaction_t));
-	if (!transaction)
-		return (NULL);
-
-	data = calloc(1, sizeof(tx_data_t));
-	if (!data)
-	{
-		free(transaction);
-		return (NULL);
-	}
-
-	if (!ec_to_pub(receiver, receiver_pub) ||
-		!init_transaction_data(data, transaction, sender, receiver,
-			amount, all_unspent))
-	{
-		free(transaction);
-		free(data);
-		return (NULL);
-	}
-
-	return (data);
 }
 
 /**
@@ -200,45 +100,65 @@ transaction_t *transaction_create(EC_KEY const *sender, EC_KEY const *receiver,
 	uint32_t amount, llist_t *all_unspent)
 {
 	transaction_t *transaction;
-	tx_data_t *data;
+	tx_data_t data;
+	tx_out_t *out;
 	uint8_t receiver_pub[EC_PUB_LEN];
 
-	if (!sender || !receiver || !amount || !all_unspent)
+	if (!sender || !receiver || !amount || !all_unspent ||
+		!ec_to_pub(sender, data.pub) || !ec_to_pub(receiver, receiver_pub))
 		return (NULL);
 
-	data = create_and_prepare_transaction(sender, receiver, amount, all_unspent);
-	if (!data)
-		return (NULL);
-
-	transaction = data->txt;
-	if (!ec_to_pub(receiver, receiver_pub))
+	transaction = calloc(1, sizeof(transaction_t));
+	if (!transaction || !create_transaction_lists(transaction))
 	{
-		cleanup_transaction(transaction, data);
+		free(transaction);
 		return (NULL);
 	}
 
-	/* Collect UTXOs belonging to sender */
-	llist_for_each(all_unspent, build_transaction, data);
+	/* Initialize data structure */
+	data.needed = amount;
+	data.txt = transaction;
+	data.sender = sender;
+	data.all_unspent = all_unspent;
+	data.amount_total = 0;
 
-	/* Check if we have enough funds */
-	if (data->amount_total < data->needed ||
-		!create_transaction_outputs(transaction, data, receiver_pub))
+	/* Collect UTXOs and create outputs */
+	llist_for_each(all_unspent, build_transaction, &data);
+	if (data.amount_total < data.needed)
 	{
-		cleanup_transaction(transaction, data);
+		cleanup_transaction(transaction);
 		return (NULL);
 	}
 
-	/* Compute transaction hash */
+	/* Create outputs */
+	out = tx_out_create(data.needed, receiver_pub);
+	if (!out || llist_add_node(transaction->outputs, out, ADD_NODE_REAR) != 0)
+	{
+		free(out);
+		cleanup_transaction(transaction);
+		return (NULL);
+	}
+
+	/* Create change output if necessary */
+	if (data.amount_total > data.needed)
+	{
+		out = tx_out_create(data.amount_total - data.needed, data.pub);
+		if (!out || llist_add_node(transaction->outputs, out, ADD_NODE_REAR) != 0)
+		{
+			free(out);
+			cleanup_transaction(transaction);
+			return (NULL);
+		}
+	}
+
+	/* Compute hash and sign inputs */
 	if (!transaction_hash(transaction, transaction->id))
 	{
-		cleanup_transaction(transaction, data);
+		cleanup_transaction(transaction);
 		return (NULL);
 	}
 
-	/* Sign all inputs */
-	llist_for_each(transaction->inputs, sign_ins, data);
-	free(data);
-
+	llist_for_each(transaction->inputs, sign_ins, &data);
 	return (transaction);
 }
 
