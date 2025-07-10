@@ -1,53 +1,46 @@
 #include "blockchain.h"
 
 /**
- * block_create - Creates a Block structure and initializes it
- * @prev: pointer to the previous Block in the Blockchain
- * @data: points to a memory area to duplicate in the Block's data
- * @data_len: number of bytes to duplicate in data
- *
- * Return: pointer to the allocated Block, or NULL on failure
+ * blockchain_create - Creates a new blockchain
+ * Return: Pointer to new chain or NULL
  */
-block_t *block_create(block_t const *prev, int8_t const *data,
-		uint32_t data_len)
+blockchain_t *blockchain_create(void)
 {
-	block_t *new_block;
-	uint32_t copy_len;
-
-	if (!prev || !data)
-		return (NULL);
-
-	new_block = malloc(sizeof(block_t));
-	if (!new_block)
-		return (NULL);
-
-	/* Determine how many bytes to copy */
-	copy_len = (data_len > BLOCKCHAIN_DATA_MAX) ?
-		BLOCKCHAIN_DATA_MAX : data_len;
-
-	/* Initialize block info */
-	new_block->info.index = prev->info.index + 1;
-	new_block->info.difficulty = 0;
-	new_block->info.nonce = 0;
-	new_block->info.timestamp = time(NULL);
-	memcpy(new_block->info.prev_hash, prev->hash, SHA256_DIGEST_LENGTH);
-
-	/* Initialize block data */
-	memset(new_block->data.buffer, 0, BLOCKCHAIN_DATA_MAX);
-	memcpy(new_block->data.buffer, data, copy_len);
-	new_block->data.len = copy_len;
-
-	/* Zero out the hash */
-	memset(new_block->hash, 0, SHA256_DIGEST_LENGTH);
-
-	/* Initialize the transaction list to an empty linked list */
-	new_block->transactions = llist_create(MT_SUPPORT_FALSE);
-	if (!new_block->transactions)
-	{
-		free(new_block);
-		return (NULL);
-	}
-
-	return (new_block);
+    blockchain_t *new_chain = NULL;
+    block_t *new_block = NULL;
+    block_info_t info = {0, 0, 1537578000, 0, {0}};
+    block_data_t data = {"Holberton School", 16};
+    
+    new_chain = malloc(sizeof(blockchain_t));
+    if (!new_chain)
+        return (NULL);
+    
+    new_block = malloc(sizeof(block_t));
+    if (!new_block)
+    {
+        free(new_chain);
+        return (NULL);
+    }
+    
+    new_chain->chain = llist_create(MT_SUPPORT_FALSE);
+    if (!new_chain->chain)
+    {
+        free(new_block);
+        free(new_chain);
+        return (NULL);
+    }
+    
+    new_block->info = info;
+    new_block->data = data;
+    memcpy(new_block->hash, ATLAS_HASH, SHA256_DIGEST_LENGTH);
+    
+    if (llist_add_node(new_chain->chain, new_block, ADD_NODE_REAR) == -1)
+    {
+        llist_destroy(new_chain->chain, 0, NULL);
+        free(new_block);
+        free(new_chain);
+        return (NULL);
+    }
+    
+    return (new_chain);
 }
-

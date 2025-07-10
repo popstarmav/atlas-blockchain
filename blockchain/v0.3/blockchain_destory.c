@@ -1,18 +1,20 @@
 #include "blockchain.h"
 
 /**
- * block_destroy - Deletes an existing Block
- * @block: Pointer to the Block to delete
+ * blockchain_destroy - Destroys a blockchain and frees all memory
+ * @blockchain: Pointer to the blockchain to destroy
  */
-void block_destroy(block_t *block)
+void blockchain_destroy(blockchain_t *blockchain)
 {
-    if (block)
-    {
-        /* Destroy the transaction list if it exists */
-        if (block->transactions)
-            llist_destroy(block->transactions, 1, (node_dtor_t)transaction_destroy);
-        
-        free(block);
-    }
-}
+	if (!blockchain)
+		return;
 
+	if (blockchain->chain)
+	{
+		/* Pass block_destroy to properly free each block */
+		llist_destroy(blockchain->chain, 1,
+				(void (*)(void *))block_destroy);
+	}
+
+	free(blockchain);
+}
